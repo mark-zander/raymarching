@@ -5,15 +5,18 @@ use winit::{
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
+// use multiarray::*;
 
 pub mod cli;
 pub mod display;
 pub mod pipeline;
 pub mod div_size;
+pub mod texture;
 
 struct State {
     display: display::Display,
     div_size: div_size::Data,
+    cube_texture: texture::Texture,
     render_pipeline: wgpu::RenderPipeline,
 }
 
@@ -21,12 +24,22 @@ impl State {
     async fn new(window: Window, args: &cli::Args) -> Self {
         let display = display::Display::new(window).await.unwrap();
         let div_size = div_size::Data::new(display.size(), display.device());
+        let color_cube = texture::ColorCube::new();
+        let cube_texture = texture::Texture::mk_cube(
+            display.device(), display.queue(),
+            color_cube, "Color Cube"
+        );
+        // let cube_bind_group_layout = cube_texture.bind_group_layout;
+        // let cube_bind_group = cube_texture.bind_group;
+
         let render_pipeline = pipeline::make(&display, args, &[
             &div_size.layout,
+            &cube_texture.bind_layout,
         ]);
         Self {
             display,
             div_size,
+            cube_texture,
             render_pipeline,
         }
     }
@@ -90,6 +103,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.div_size.bind, &[]);
+            render_pass.set_bind_group(1, &self.cube_texture.bind, &[]);
             render_pass.draw(0..6, 0..1);
         }
 
